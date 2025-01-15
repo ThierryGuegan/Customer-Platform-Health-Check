@@ -1,1 +1,132 @@
-# Customer-Platform-Health-Check
+# Customer Platform Health Check
+This Customer_Platform_Health_Check.exe provides a health check utility for managing and monitoring a customer platform. It performs various checks, such as database connectivity, license validation, disk space monitoring, and service statuses, while generating an HTML report summarizing the results.
+
+### Features
+- **Database Connection Check**: Validates connectivity to a PostgreSQL database (CSS).
+- **License Key Validation**: Verifies license keys in both CSS and the console.
+- **Disk Space Monitoring**: Ensures sufficient disk space on the specified drive.
+- **Service Checks**: Monitors AIP Console version, services like HDED, and imaging status.
+- **HTML Report Generation**: Creates an HTML report summarizing health checks.
+
+### Prerequisites
+To run Customer_Platform_Health_Check.exe we need below details. These details should be there
+inside Customer_Platform_Health_Check_Settings.json file.
+
+
+Example JSON Structure
+
+```json
+{
+  "css": {
+    "database": "css_database",
+    "user": "css_user",
+    "password": "css_password",
+    "host": "css_host",
+    "port": 2284
+  },
+  "console": {
+    "restURL": "http://console.rest.url/",
+    "user": "console_user",
+    "password": "console_password"
+  },
+  "warnDays": 15
+}
+```
+Update the Customer_Platform_Health_Check_Settings.json file with the appropriate database, console, and user configurations.
+
+### How It Works
+The Customer_Platform_Health_Check.exe follows these steps to perform its operations:
+
+
+**1. Initialization:**
+The script locates the Customer_Platform_Health_Check_Settings.json file in the following directory:
+```bash
+C:\CAST\Customer_Platform_Health_Check
+```
+This file contains critical configuration values, including:
+
+- Warn Days
+- CSS Database Name, Username, Password, Host, and Port
+- AIP Console Rest URL and Credentials
+
+Additionally, the EXE version (Version-1.0.0.0) is hardcoded.
+
+**2. Log File Creation:**
+The script creates a log file named Customer_Platform_Health_Check_Logs.txt in the same directory to record all actions and errors.
+
+**3. Updating Credentials:**
+The script updates the AIP Console credentials (Username and Password) inside the JSON file.
+If the credentials are invalid, they are replaced with default values (admin/admin or cast/cast).
+
+**4. CSS Configuration Update:**
+Fetches the CSS port number and hostname from the AIP Console.
+Updates the CSS Port and CSS Hostname in the JSON configuration file.
+
+**5. Fetching Data from AIP Console:**
+Retrieves the License Key from the console.
+Fetches the list of applications along with their details from the console.
+
+**6. Updating License Keys:**
+Updates the License Key for each application in the CSS database table (sys_licenses).
+
+**7. Health Checks:**
+Performs various health checks, including:
+
+- **CSS Status:** Validates database connectivity.
+- **License Key Status:** Verifies license key validity in CSS and Console.
+- **Disk Space:** Checks if sufficient disk space is available on the C: drive.
+- **HDED Service Status:** Ensures the HDED service is running and its URL is functional.
+- **Imaging Status:** Confirms whether imaging is properly loaded.
+
+**8. Generating an HTML Report:**
+- Collects data such as:
+	1. 	Current Date and Time
+	2. 	Host Name
+	3. 	Application Details
+- Creates an HTML file summarizing the results in a table format.
+- Saves the file in the following directory:- C:\CAST\Customer_Platform_Health_Check
+
+
+### Main Functionalities(Methods):
+- **update_console_username_and_password(json_file)**:- Updates the username and password in the JSON configuration file if default credentials are detected.
+
+- **update_css_details(json_file, host_name)**:- Updates CSS database configuration in the JSON file with the latest port and host details.
+
+- **get_applications_from_console()**:- Fetches application details from the console.
+
+- **get_the_license_from_the_console()**:- Retrieves the license key details from the console.
+
+- **update_application_license_key(app_local_schema, console_license_key)**:- Updates the application license key in the CSS database.
+
+- **check_postgres_status()**:- Verifies the status of the PostgreSQL database.
+
+- **check_diskspace()**:- Checks the available disk space on the system.
+
+- **is_aip_console_version_2x()**:- Checks if the AIP Console version is 2.x.
+
+- **check_HDED()**:- Validates the status of the HDED service and its associated URL.
+
+- **check_imaging_loaded()**:- Confirms whether imaging is loaded.
+
+- **create_html_table(data, host_name, current_date_time, exe_version)**:- Generates an HTML table for the health check results.
+
+### Logs
+The script logs details of its execution at:
+```bash
+C:\CAST\Customer_Platform_Health_Check\Customer_Platform_Health_Check_Logs.txt
+```
+
+### Error Handling
+- Errors during execution are logged for debugging purposes.
+- The script provides meaningful messages for configuration or runtime issues.
+
+### Contributing
+
+Contributions are welcome! Please open an issue or submit a pull request with your changes.
+
+
+
+### Support
+
+If you encounter any issues or have questions, please contact s.p@castsoftware.com
+
