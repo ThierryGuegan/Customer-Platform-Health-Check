@@ -1,0 +1,15 @@
+{
+  "warnDays": 15,
+  "css": {
+    "database": "postgres",
+    "user": "operator",
+    "password": "CastAIP",
+    "host": "localhost",
+    "port": 2284
+  },
+  "console": {
+    "restURL": "http://localhost:8081/",
+    "user": "admin",
+    "password": "admin"
+  }
+}
