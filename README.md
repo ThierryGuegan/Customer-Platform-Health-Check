@@ -114,6 +114,9 @@ The script logs details of its execution inside Customer_Platform_Health_Check_L
 - Errors during execution are logged for debugging purposes.
 - The script provides meaningful messages for configuration or runtime issues.
 
+### Deployment
+Deploy Customer_Platform_Health_Check.exe inside Windows Task Scheduler using Customer_Platform_Health_Check.xml file.
+
 ### Contributing
 
 Contributions are welcome! Please open an issue or submit a pull request with your changes.
