@@ -117,6 +117,12 @@ The script logs details of its execution inside Customer_Platform_Health_Check_L
 ### Deployment
 Deploy Customer_Platform_Health_Check.exe inside Windows Task Scheduler using Customer_Platform_Health_Check.xml file.
 
+### Example HTML file.
+![image](https://github.com/user-attachments/assets/5832d0c5-5871-4105-a566-0d0a557650d4)
+
+### All possible return code from Customer_Platform_Health_Check 
+![image](https://github.com/user-attachments/assets/eb4b2891-a835-49f2-bb17-e822a3ec7dad)
+
 ### Contributing
 
 Contributions are welcome! Please open an issue or submit a pull request with your changes.
