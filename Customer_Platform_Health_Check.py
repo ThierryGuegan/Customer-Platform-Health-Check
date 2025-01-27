@@ -15,7 +15,7 @@ from requests.auth import HTTPBasicAuth
 
 class Platform():
 
-    def __init__(self, css_database, css_user, css_password, css_host, css_port, console_restURL, console_user, console_password, warnDays):
+    def __init__(self, css_database, css_user, css_password, css_host, css_port, console_restURL, console_user, console_password, warnDays, dashboard_url):
         self.css_database = css_database
         self.css_user = css_user
         self.css_password = css_password
@@ -26,39 +26,9 @@ class Platform():
         self.console_user = console_user
         self.console_password = console_password
         self.warnDays = int(warnDays)
+        self.dashboard_url = dashboard_url
 
 
-    #this function updates AIP Console for Username and Password inside Customer_Platform_Health_Check_Settings.json file.
-    def update_console_username_and_password(self, json_file):
-
-        try:
-            method = "get"
-            url=f"{self.console_restURL}api/"
-            auth = HTTPBasicAuth(f'{self.console_user}', f'{self.console_password}')
-
-            rsp = requests.request(method, url, auth=auth)
-            # print(rsp.status_code)
-            if rsp.status_code == 401:
-                auth = HTTPBasicAuth('cast', 'cast')
-                rsp_2 = requests.request(method, url, auth=auth)
-                if rsp_2.status_code == 200:
-                    with open(json_file, "r") as a_file:
-                        json_object = json.load(a_file)
-                    json_object["console"]["user"] = 'cast'
-                    json_object["console"]["password"] = 'cast'
-                    self.console_user = 'cast'
-                    self.console_password = 'cast'
-                    with open(json_file, "w") as a_file:
-                        json.dump(json_object, a_file)
-
-                    print(f"updated the AIP Console for Username as cast and Password as cast inside Customer_Platform_Health_Check_Settings.json file.")
-                    logging.error(f"updated the AIP Console for Username as cast and Password as cast inside Customer_Platform_Health_Check_Settings.json file.")
-
-        except Exception as e:
-            print('some exception has occured! while executing update_console_username_and_password() function.\n Please resolve them or contact developers.')
-            logging.error('some exception has occured! while executing update_console_username_and_password() function.\n Please resolve them or contact developers.')
-            print(e)
-            logging.error(e)
 
     #this function updates the CSS port number inside Customer_Platform_Health_Check_Settings.json file.
     def update_css_details(self, json_file, host_name):
@@ -438,7 +408,7 @@ class Platform():
                 service_name_substring = "hded"
                 HDED_service_status, service_name = check_HDED_status(service_name_substring)
 
-                url = "http://localhost:8087/static/default.html"
+                url = f"{self.dashboard_url}static/default.html"
                 HDED_url_status = check_REST_Client_status(url)
 
                 if HDED_service_status == 'OK' and HDED_url_status == 'OK':
@@ -525,7 +495,7 @@ if __name__ == "__main__":
     try:
         current_directory = os.getcwd()
 
-        with open('C:\\CAST\\Customer_Platform_Health_Check\\Customer_Platform_Health_Check_Settings.json') as f:
+        with open(current_directory + '\\Customer_Platform_Health_Check_Settings.json') as f:
             # returns JSON object as a dictionary
             data = json.load(f)
 
@@ -538,18 +508,17 @@ if __name__ == "__main__":
         console_user = data['console']['user']
         console_password = data['console']['password']
         warnDays = data['warnDays']
-        exe_version = 'Version-1.0.0.0'
+        dashboard_url = data['dashboard_url']
+        html_file_path = data['html_file_path']
+        exe_version = 'Version-1.0.0.1'
 
-        isExist = os.path.exists("C:\\CAST\\Customer_Platform_Health_Check")
-        if not isExist:
-            os.makedirs("C:\\CAST\\Customer_Platform_Health_Check")
-            # print("The new directory is created!")
+        isExist = os.path.exists(current_directory)
 
-        logging.basicConfig(filename="C:\\CAST\\Customer_Platform_Health_Check\\Customer_Platform_Health_Check_Logs.txt", level=logging.INFO, format="%(asctime)s %(message)s", filemode='w')
+        logging.basicConfig(filename= current_directory + "\\Customer_Platform_Health_Check_Logs.txt", level=logging.INFO, format="%(asctime)s %(message)s", filemode='w')
 
         # logging.info('-----------------------------------------------------------------------------------------------------------------------------------------------')
 
-        platform_obj = Platform(css_database, css_user, css_password, css_host, css_port, console_restURL, console_user, console_password, warnDays)
+        platform_obj = Platform(css_database, css_user, css_password, css_host, css_port, console_restURL, console_user, console_password, warnDays, dashboard_url)
 
         current_date_time = datetime.now()
 
@@ -557,9 +526,8 @@ if __name__ == "__main__":
         returned_value = subprocess.check_output(cmd, shell=True)  # returns the exit code in unix
         host_name = returned_value.decode("utf-8").strip().lower()
 
-        platform_obj.update_console_username_and_password('C:\\CAST\\Customer_Platform_Health_Check\\Customer_Platform_Health_Check_Settings.json')
 
-        platform_obj.update_css_details('C:\\CAST\\Customer_Platform_Health_Check\\Customer_Platform_Health_Check_Settings.json', host_name)
+        platform_obj.update_css_details(current_directory + '\\Customer_Platform_Health_Check_Settings.json', host_name)
 
         table_data = [["Application Name", "CSS Status", "License Key in CSS", "License Key in Console", "DiskSpace in C-Drive", "Engineering/Health Dashboard", "Imaging is loaded"]]
 
@@ -614,7 +582,7 @@ if __name__ == "__main__":
         html_table = platform_obj.create_html_table(table_data, host_name, current_date_time, exe_version)
 
         # Write HTML to a file
-        local_html_path = f'C:\\CAST\\Customer_Platform_Health_Check\\{host_name}.html' 
+        local_html_path = html_file_path + f'\\{host_name}.html' 
         with open( local_html_path, "w") as file:
             file.write(html_table)
 

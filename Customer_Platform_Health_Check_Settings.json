@@ -1,15 +1,17 @@
 {
-  "warnDays": 15,
   "css": {
     "database": "postgres",
     "user": "operator",
-    "password": "CastAIP",
+    "password": "",
     "host": "localhost",
     "port": 2284
   },
   "console": {
     "restURL": "http://localhost:8081/",
-    "user": "admin",
-    "password": "admin"
-  }
+    "user": "",
+    "password": ""
+  },
+  "dashboard_url": "http://localhost:8087/",
+  "warnDays": 15,
+  "html_file_path": "C:\\CAST"
 }
