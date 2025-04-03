@@ -26,8 +26,10 @@ Example JSON Structure
   },
   "console": {
     "restURL": "http://console.rest.url/",
-    "user": "console_user",
-    "password": "console_password"
+    "standalone_version": { "user": "console_username", "password": "console_password" },
+    "enterprise_version": {
+      "api_key": "console_api_key"
+    }
   },
   "dashboard_url": "HDED Dashboard URL",
   "warnDays": 15,
