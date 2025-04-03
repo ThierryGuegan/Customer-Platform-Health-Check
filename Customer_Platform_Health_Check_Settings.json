@@ -8,8 +8,10 @@
   },
   "console": {
     "restURL": "http://localhost:8081/",
-    "user": "",
-    "password": ""
+    "standalone_version": { "user": "", "password": "" },
+    "enterprise_version": {
+      "api_key": ""
+    }
   },
   "dashboard_url": "http://localhost:8087/",
   "warnDays": 15,

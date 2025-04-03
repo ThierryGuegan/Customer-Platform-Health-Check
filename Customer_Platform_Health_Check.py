@@ -6,7 +6,6 @@ import json
 import re
 import logging
 import subprocess
-import shutil
 
 from datetime import datetime
 from requests.auth import HTTPBasicAuth
@@ -15,7 +14,7 @@ from requests.auth import HTTPBasicAuth
 
 class Platform():
 
-    def __init__(self, css_database, css_user, css_password, css_host, css_port, console_restURL, console_user, console_password, warnDays, dashboard_url):
+    def __init__(self, css_database, css_user, css_password, css_host, css_port, console_restURL, console_user, console_password, console_api_key, warnDays, dashboard_url):
         self.css_database = css_database
         self.css_user = css_user
         self.css_password = css_password
@@ -25,10 +24,9 @@ class Platform():
         self.console_restURL = console_restURL
         self.console_user = console_user
         self.console_password = console_password
+        self.console_api_key = console_api_key
         self.warnDays = int(warnDays)
         self.dashboard_url = dashboard_url
-
-
 
     #this function updates the CSS port number inside Customer_Platform_Health_Check_Settings.json file.
     def update_css_details(self, json_file, host_name):
@@ -37,8 +35,9 @@ class Platform():
             method = "get"
             url=f"{self.console_restURL}api/settings/measurement-settings"
             auth = HTTPBasicAuth(f'{self.console_user}', f'{self.console_password}')
+            headers = {"X-API-KEY": self.console_api_key}
 
-            rsp = requests.request(method, url, auth=auth)
+            rsp = requests.request(method, url, auth=auth, headers=headers)
             # print(rsp.status_code)
             if rsp.status_code == 200:
                 data = json.loads(rsp.text) 
@@ -81,15 +80,16 @@ class Platform():
             logging.error('some exception has occured! while executing update_css_details() function.\n Please resolve them or contact developers.')
             print(e)
             logging.error(e)
-
+   
     def get_applications_from_console(self):
         method = "get"
         url=f"{self.console_restURL}api/applications"
         auth = HTTPBasicAuth(f'{self.console_user}', f'{self.console_password}')
+        headers = {"X-API-KEY": self.console_api_key}
 
         try:
             #fetching the Application list and details.
-            rsp = requests.request(method, url, auth=auth)
+            rsp = requests.request(method, url, auth=auth, headers=headers)
             # print(rsp.status_code)
             if rsp.status_code == 200:
                 apps = json.loads(rsp.text) 
@@ -109,10 +109,11 @@ class Platform():
         method = "get"
         url=f"{self.console_restURL}api/settings/license"
         auth = HTTPBasicAuth(f'{self.console_user}', f'{self.console_password}')
+        headers = {"X-API-KEY": self.console_api_key}
 
         try:
             #fetching the Application list and details.
-            rsp = requests.request(method, url, auth=auth)
+            rsp = requests.request(method, url, auth=auth, headers=headers)
             # print(rsp.status_code)
             if rsp.status_code == 200:
                 data = json.loads(rsp.text) 
@@ -129,10 +130,11 @@ class Platform():
     def get_local_schema(self, guid):
         url=f"{self.console_restURL}api/aic/applications/{guid}"
         auth = HTTPBasicAuth(f'{self.console_user}', f'{self.console_password}')
+        headers = {"X-API-KEY": self.console_api_key}
 
         try:
             #fetching the app schemas.
-            rsp = requests.get(url, auth=auth)
+            rsp = requests.get(url, auth=auth, headers=headers)
             # print(rsp.status_code)
             if rsp.status_code == 200:
                 data = json.loads(rsp.text) 
@@ -289,9 +291,10 @@ class Platform():
         method = "get"
         url=f"{self.console_restURL}api/settings/license"
         auth = HTTPBasicAuth(self.console_user, self.console_password)
+        headers = {"X-API-KEY": self.console_api_key}
 
         try:
-            rsp = requests.request(method, url, auth=auth)
+            rsp = requests.request(method, url, auth=auth, headers=headers)
             # print(rsp.status_code)
             if rsp.status_code == 200:
                 licence_key_details = json.loads(rsp.text) 
@@ -352,9 +355,10 @@ class Platform():
         method = "get"
         url=f"{self.console_restURL}api/"
         auth = HTTPBasicAuth(self.console_user, self.console_password)
+        headers = {"X-API-KEY": self.console_api_key}
 
         try:
-            rsp = requests.request(method, url, auth=auth)
+            rsp = requests.request(method, url, auth=auth, headers=headers)
             # print(rsp.status_code)
             if rsp.status_code == 200:
                 res = json.loads(rsp.text) 
@@ -436,13 +440,14 @@ class Platform():
             method = "get"
             url=f"{self.console_restURL}api/settings/imaging-settings"
             auth = HTTPBasicAuth(self.console_user, self.console_password)
+            headers = {"X-API-KEY": self.console_api_key}
 
             try:
-                rsp = requests.request(method, url, auth=auth)
+                rsp = requests.request(method, url, auth=auth, headers=headers)
                 # print(rsp.status_code)
                 if rsp.status_code == 200:
                     imaging_details = json.loads(rsp.text) 
-                    rsp_2 = requests.request('PUT', url, auth=auth, json=imaging_details)
+                    rsp_2 = requests.request('PUT', url, auth=auth, json=imaging_details, headers=headers)
                     if rsp_2.status_code == 202:
                         logging.info("check_imaging_loaded() :- OK - imaging is loaded.")
                         return 'OK'
@@ -505,12 +510,13 @@ if __name__ == "__main__":
         css_host = data['css']['host']
         css_port = data['css']['port']
         console_restURL = data['console']['restURL']
-        console_user = data['console']['user']
-        console_password = data['console']['password']
+        console_user = data['console']['standalone_version']['user']
+        console_password = data['console']['standalone_version']['password']
+        console_api_key = data['console']['enterprise_version']['api_key']
         warnDays = data['warnDays']
         dashboard_url = data['dashboard_url']
         html_file_path = data['html_file_path']
-        exe_version = 'Version-1.0.0.1'
+        exe_version = 'Version-1.0.0.2'
 
         isExist = os.path.exists(current_directory)
 
@@ -518,14 +524,13 @@ if __name__ == "__main__":
 
         # logging.info('-----------------------------------------------------------------------------------------------------------------------------------------------')
 
-        platform_obj = Platform(css_database, css_user, css_password, css_host, css_port, console_restURL, console_user, console_password, warnDays, dashboard_url)
+        platform_obj = Platform(css_database, css_user, css_password, css_host, css_port, console_restURL, console_user, console_password, console_api_key, warnDays, dashboard_url)
 
         current_date_time = datetime.now()
 
         cmd = "hostname"
         returned_value = subprocess.check_output(cmd, shell=True)  # returns the exit code in unix
         host_name = returned_value.decode("utf-8").strip().lower()
-
 
         platform_obj.update_css_details(current_directory + '\\Customer_Platform_Health_Check_Settings.json', host_name)
 
