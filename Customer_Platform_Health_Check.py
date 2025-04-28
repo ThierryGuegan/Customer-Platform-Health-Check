@@ -516,7 +516,7 @@ if __name__ == "__main__":
         warnDays = data['warnDays']
         dashboard_url = data['dashboard_url']
         html_file_path = data['html_file_path']
-        exe_version = 'Version-1.0.0.2'
+        exe_version = 'Version-1.0.0.3'
 
         isExist = os.path.exists(current_directory)
 
@@ -532,7 +532,7 @@ if __name__ == "__main__":
         returned_value = subprocess.check_output(cmd, shell=True)  # returns the exit code in unix
         host_name = returned_value.decode("utf-8").strip().lower()
 
-        platform_obj.update_css_details(current_directory + '\\Customer_Platform_Health_Check_Settings.json', host_name)
+        # platform_obj.update_css_details(current_directory + '\\Customer_Platform_Health_Check_Settings.json', host_name)
 
         table_data = [["Application Name", "CSS Status", "License Key in CSS", "License Key in Console", "DiskSpace in C-Drive", "Engineering/Health Dashboard", "Imaging is loaded"]]
 
