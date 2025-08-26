@@ -173,9 +173,11 @@ class Platform():
             # Fetch the result
             result = cursor.fetchone()
             if result is None:
-                cursor.execute(f"INSERT INTO {app_local_schema}.sys_licenses (license_code, license_id) VALUES ('{console_license_key}', 0)")
-            else:    
-                cursor.execute(f"UPDATE {app_local_schema}.sys_licenses SET license_code='{console_license_key}'")
+                query = f"INSERT INTO {app_local_schema}.sys_licenses (license_code, license_id) VALUES(%s, 0)"
+                cursor.execute(query, (console_license_key,))
+            else:                    
+                query = f"UPDATE {app_local_schema}.sys_licenses SET license_code=%s"
+                cursor.execute(query, (console_license_key,))
 
             connection.commit()
             cursor.close()
@@ -229,7 +231,7 @@ class Platform():
 
         return remaining_days
 
-    def check_the_licence_key_in_css(self, app_local_schema):
+    def check_the_license_key_in_css(self, app_local_schema):
         try:
             # Establish a connection to the PostgreSQL server
             connection = psycopg2.connect(
@@ -250,12 +252,12 @@ class Platform():
             # Fetch the result
             result = cursor.fetchone()
             if result is None:
-                logging.info("check_the_licence_key_in_css() :- KO - at the date of the check the license key is not set.")
+                logging.info("check_the_license_key_in_css() :- KO - at the date of the check the license key is not set.")
                 # print('KO at the date of the check the license key has expired or is not set.')
                 return 'KO - License key is not set'
             elif len(result[1]) > 0:
-                # logging.info("Licence Key:"+ str(result[1]))
-                # print("Licence Key:", result[1])
+                # logging.info("License Key:"+ str(result[1]))
+                # print("License Key:", result[1])
 
                 expiry_date_pattern = '(\\d{8})'
                 expiry_date = re.findall(expiry_date_pattern, result[1])
@@ -263,15 +265,15 @@ class Platform():
                     date_string = expiry_date[0][:4]+'-'+expiry_date[0][4:6]+'-'+expiry_date[0][6:]
                     remaining_days = self.calculate_remaining_days(date_string)
                     if remaining_days <= 0:
-                        logging.info("check_the_licence_key_in_css() :- KO - at the date of the check the license key has expired.")
+                        logging.info("check_the_license_key_in_css() :- KO - at the date of the check the license key has expired.")
                         return 'KO - License key has expired'
                     elif remaining_days < self.warnDays:
-                        logging.info(f'check_the_licence_key_in_css() :- WARN - the license key is about to expire in less than {remaining_days} calendar days.')
+                        logging.info(f'check_the_license_key_in_css() :- WARN - the license key is about to expire in less than {remaining_days} calendar days.')
                         # print('OK the license is valid at the date of the check.') 
                         # print(f'WARN the license key is about to expire in less than {remaining_days} calendar days.')
                         return f'WARN (expires in less than {remaining_days} days.)'
                     else:
-                        logging.info("check_the_licence_key_in_css() :- OK - the license is valid at the date of the check.")
+                        logging.info("check_the_license_key_in_css() :- OK - the license is valid at the date of the check.")
                         # print('OK the license is valid at the date of the check.')
                         return 'OK'
 
@@ -279,14 +281,14 @@ class Platform():
             cursor.close()
             connection.close()
         except Exception as e:
-            logging.error("check_the_licence_key_in_css() :- ERR - some error occurred that prevented to get the status -> "+str(e))
+            logging.error("check_the_license_key_in_css() :- ERR - some error occurred that prevented to get the status -> "+str(e))
             if app_local_schema is None:
                 return 'KO - Application declared but no analysis run'
             # print("ERR some error occurred that prevented to get the status -> ",e)
             # print("PostgreSQL connection failed:", e)
             return 'ERR'
 
-    def check_the_licence_key_in_console(self):
+    def check_the_license_key_in_console(self):
 
         method = "get"
         url=f"{self.console_restURL}api/settings/license"
@@ -297,76 +299,79 @@ class Platform():
             rsp = requests.request(method, url, auth=auth, headers=headers)
             # print(rsp.status_code)
             if rsp.status_code == 200:
-                licence_key_details = json.loads(rsp.text) 
+                license_key_details = json.loads(rsp.text) 
 
-            if licence_key_details["license"] is None:
-                logging.info('check_the_licence_key_in_console() :- KO - at the date of the check the license key is not set.')
+            if license_key_details["license"] is None:
+                logging.info('check_the_license_key_in_console() :- KO - at the date of the check the license key is not set.')
                 # print('KO at the date of the check the license key has expired or is not set.')
                 return 'KO - License key is not set'
-            elif len(licence_key_details["license"]) > 0:
-                # logging.info("check_the_licence_key_in_console() :- Licence Key:" + str(licence_key_details["license"]))
-                # print("Licence Key:", licence_key_details["license"])
-                # logging.info("check_the_licence_key_in_console() :- Expiry Date:" + str(licence_key_details["expirationDate"]))
-                # print("Expiry Date:", licence_key_details["expirationDate"])
+            elif len(license_key_details["license"]) > 0:
+                # logging.info("check_the_license_key_in_console() :- License Key:" + str(license_key_details["license"]))
+                # print("License Key:", license_key_details["license"])
+                # logging.info("check_the_license_key_in_console() :- Expiry Date:" + str(license_key_details["expirationDate"]))
+                # print("Expiry Date:", license_key_details["expirationDate"])
 
-                remaining_days = self.calculate_remaining_days(licence_key_details["expirationDate"])
+                remaining_days = self.calculate_remaining_days(license_key_details["expirationDate"])
                 if remaining_days <= 0:
-                    logging.info("check_the_licence_key_in_console() :- KO - at the date of the check the license key has expired.")
+                    logging.info("check_the_license_key_in_console() :- KO - at the date of the check the license key has expired.")
                     return 'KO - License key has expired'
                 elif remaining_days < self.warnDays:
-                    logging.info('check_the_licence_key_in_console() :- OK - the license is valid at the date of the check.')
+                    logging.info('check_the_license_key_in_console() :- OK - the license is valid at the date of the check.')
                     # print('OK the license is valid at the date of the check.')
-                    logging.info(f'check_the_licence_key_in_console() :- WARN - the license key is about to expire in less than {remaining_days} calendar days.') 
+                    logging.info(f'check_the_license_key_in_console() :- WARN - the license key is about to expire in less than {remaining_days} calendar days.') 
                     # print(f'WARN the license key is about to expire in less than {remaining_days} calendar days.')
                     return f'WARN - (expires in less than {remaining_days} days.)'
                 else:
-                    logging.info("check_the_licence_key_in_console() :- OK - the license is valid at the date of the check.")
+                    logging.info("check_the_license_key_in_console() :- OK - the license is valid at the date of the check.")
                     # print('OK the license is valid at the date of the check.')
                     return 'OK'
         except Exception as e:
-            logging.error("check_the_licence_key_in_console() :- ERR - some error occurred that prevented to get the status -> "+str(e))
-            if str(e) == "cannot access local variable 'licence_key_details' where it is not associated with a value":
-                return "KO - Imaging Console’s Initial configuration is not done"
+            logging.error("check_the_license_key_in_console() :- ERR - some error occurred that prevented to get the status -> "+str(e))
+            if str(e) == "cannot access local variable 'license_key_details' where it is not associated with a value":
+                return "KO - Imaging Console Initial configuration is not done"
             # print("PostgreSQL connection failed:", e)
             return 'ERR'
 
     def check_diskspace(self):
         try:
-            statuses = []
+            details = {}
+            global_status = "OK"
     
             for partition in psutil.disk_partitions(all=False):
                 try:
                     usage = psutil.disk_usage(partition.mountpoint)
                     percent_free = 100 - usage.percent
-                    drive = partition.device
+    
+                    drive = partition.mountpoint
     
                     if percent_free < 5:
-                        status = f"KO - ({percent_free:.1f}% free space remaining on {drive})"
-                        logging.info(status)
+                        status = "KO"
                     elif percent_free < 10:
-                        status = f"WARN - ({percent_free:.1f}% free space remaining on {drive})"
-                        logging.info(status)
+                        status = "WARN"
                     else:
-                        status = f"OK - ({percent_free:.1f}% free space remaining on {drive})"
-                        logging.info(f"check_diskspace(): {status}")
+                        status = "OK"
     
-                    statuses.append(status)
+                    details[drive] = f"{drive}: {status} - ({percent_free:.1f}% free space remaining)"
+                    logging.info(details[drive])
+    
+                    if status == "KO":
+                        global_status = "KO"
+                    elif status == "WARN" and global_status != "KO":
+                        global_status = "WARN"
     
                 except PermissionError:
-                    # Happens sometimes on special system partitions (ignore safely)
-                    logging.warning(f"Skipping {partition.device} (permission denied)")
+                    details[partition.mountpoint] = f"{partition.mountpoint}: SKIPPED (permission denied)"
+                    logging.warning(details[partition.mountpoint])
     
-            # If any drive is KO --> return KO, else WARN if any WARN, else OK
-            if any(s.startswith("KO") for s in statuses):
-                return next(s for s in statuses if s.startswith("KO"))
-            elif any(s.startswith("WARN") for s in statuses):
-                return next(s for s in statuses if s.startswith("WARN"))
-            else:
-                return "OK"
+            sorted_drives = sorted(details.keys(), key=lambda x: x.upper())
+    
+            report = global_status + "==> \n"
+            report += "\n".join(details[d] for d in sorted_drives)
+            return report
     
         except Exception as e:
             logging.error(f"check_diskspace(): ERR - exception occurred: {e}")
-            return "ERR"
+            return f"Global Status: ERR\n(check_diskspace exception: {e})"
 
 
     def is_aip_console_version_2x(self):
@@ -410,7 +415,7 @@ class Platform():
                                 logging.error(f"check_HDED() :- KO - '{service_name}' service is not running.")
                                 return 'KO', service_name
                         except Exception as e:
-                            logging.error(f"check_HDED() :- ERR - 'hded' service was not found.")
+                            logging.error(f"check_HDED() :- ERR - 'hded' service was not found." +str(e))
                             return 'ERR', 'hded'
 
             def check_REST_Client_status(url):
@@ -487,11 +492,10 @@ class Platform():
     def create_html_table(self, data, data_general_status, host_name, current_date_time, exe_version):
         
         table_html = f"<p> <b>Hostname:</b> {host_name} </p>" 
-        table_html += f"<p> <b>CSS Host:</b> {self.css_host} <p> <b>Database:</b> {self.css_database} <b>Port:</b> {self.css_port} </p>" 
-        table_html += f"<p> <b>Console rest URL:</b> {self.console_restURL} </p>" 
-        table_html += f"<p> <b>Dashboard URL:</b> {self.dashboard_url} </p>" 
+        table_html += f"<p> <b>CSS Host:</b> {self.css_host} <b>Database:</b> {self.css_database} <b>Port:</b> {self.css_port} </p>" 
+        table_html += f"<p> <b>Console rest URL:</b> {self.console_restURL} <b>Dashboard URL:</b> {self.dashboard_url} </p>" 
                 
-        table_html += f"<p> <b>Generated on:</b> {current_date_time} </p> <p> <b>Customer_Platform_Health_Check.exe: </b> {exe_version} </p> <br/>" 
+        table_html += f"<p> <b>Generated on:</b> {current_date_time} <b>Customer_Platform_Health_Check.exe: </b> {exe_version} </p> <br/>" 
         table_html += f"</p> <br/>"
         table_html += f"<table style='border:1px solid black; border-collapse: collapse;'>\n"  # Adding 'border' attribute to add borders
       
@@ -534,7 +538,7 @@ class Platform():
                 elif row[i].startswith("WARN"):
                     table_html += f"<td style='border:1px solid black; border-collapse: collapse; text-align: center;'> <span style='color:#FCD12A;'>{row[i][:4]} </span><span style='color:black;'>{row[i][4:]}</span>\n  </td>"
                 elif row[i].startswith("KO") or row[i].startswith("ERR") or row[i].startswith("N/A"):
-                    table_html += f"<td style='border:1px solid black; border-collapse: collapse; color:red; text-align: center;'> {row[i]} </td>\n"
+                    table_html += f"<td style='border:1px solid black; border-collapse: collapse; text-align: center;'> <span style='color:red;'>{row[i][:2]}<span style='color:black;'>{row[i][2:]}</span>\n  </td>"
                 else:
                     table_html += f"<td style='border:1px solid black; border-collapse: collapse; text-align: center;'>{row[i]}</td>\n"
 
@@ -548,7 +552,6 @@ if __name__ == "__main__":
 
     try:
         current_directory = os.getcwd()
-
         with open(current_directory + '\\Customer_Platform_Health_Check_Settings.json') as f:
             # returns JSON object as a dictionary
             data = json.load(f)
@@ -582,15 +585,16 @@ if __name__ == "__main__":
         host_name = returned_value.decode("utf-8").strip().lower()
 
         # platform_obj.update_css_details(current_directory + '\\Customer_Platform_Health_Check_Settings.json', host_name)
-        table_data_general_status = [["CSS Status", "DiskSpace in attached disk drives", "License Key in Console", "Imaging settings in Console"]]
-        table_data = [["Application Name", "License Key in CSS", "Engineering/Health Dashboard"]]
+        table_data_general_status = [["CSS Status", "DiskSpace in attached disk drives", "License Key in Console", "Engineering/Health Dashboard", "Imaging settings in Console"]]
+        table_data = [["Application Name", "License Key in CSS"]]
 
         logging.info(f'checking platform health.....')
         # Call the function to check the Disk space status        
         DiskSpace_status = platform_obj.check_diskspace()
         # Call the function to check the CSS status        
         CSS_Status = platform_obj.check_postgres_status()
-        Console_LK_status = platform_obj.check_the_licence_key_in_console()
+        Console_LK_status = platform_obj.check_the_license_key_in_console()
+        HDED_status = platform_obj.check_HDED()
         Imaging_is_loaded = platform_obj.check_imaging_loaded()
 
         logging.info('-----------------------------------------------------------------------------------------')
@@ -598,42 +602,35 @@ if __name__ == "__main__":
         applications = platform_obj.get_applications_from_console()
 
         console_license_key = platform_obj.get_the_license_from_the_console()
-
+        
         if applications:
-            for application, app_guid in applications.items():
-
+            for application, app_guid in sorted(applications.items(), key=lambda x: x[0].lower()):
                 app_local_schema = platform_obj.get_local_schema(app_guid)
-                if app_local_schema != None: 
+                if app_local_schema is not None: 
+                    logging.info(f'checking platform health for {application}.....')
                     logging.info(f'checking app_local_schema {app_local_schema}.....')
                     
                     if console_license_key != 0:
                         platform_obj.update_application_license_key(app_local_schema, console_license_key)
-    
-                    logging.info('-----------------------------------------------------------------------------------------')
-                    logging.info(f'checking platform health for {application}.....')
-                    CSS_LK_status = platform_obj.check_the_licence_key_in_css(app_local_schema)
-                    HDED_status = platform_obj.check_HDED()
-    
-                    table_data.append([application, CSS_LK_status, HDED_status])                    
+        
+                    CSS_LK_status = platform_obj.check_the_license_key_in_css(app_local_schema)
+        
+                    table_data.append([application, CSS_LK_status])                    
                     
                 else: 
-                    logging.info(f'Not able to get app_local_schema [{app_local_schema}] for app_guid [{app_guid}].....')
-                    logging.info('-----------------------------------------------------------------------------------------')
-                    logging.info(f'checking platform health for {application}.....')        
-                    HDED_status = platform_obj.check_HDED()
+                    logging.info(f'Not able to get app_local_schema [{app_local_schema}] for application [{application}] / app_guid [{app_guid}].....')
+                    table_data.append([application, 'KO - Not able to get local schema'])
+                
+                logging.info('-----------------------------------------------------------------------------------------')
         
-                    table_data.append([application, 'N/A', HDED_status])
-
         else:
             logging.info(f'checking platform health.....')
+            table_data.append([ 'N/A', 'N/A'])
 
-            HDED_status = platform_obj.check_HDED()
-
-            table_data.append([ 'N/A', 'N/A', HDED_status])
 
         logging.info('-----------------------------------------------------------------------------------------')
         
-        table_data_general_status.append([CSS_Status, DiskSpace_status, Console_LK_status, Imaging_is_loaded]) 
+        table_data_general_status.append([CSS_Status, DiskSpace_status, Console_LK_status, HDED_status, Imaging_is_loaded]) 
         # Generate HTML table for applications informations 
         html_table = platform_obj.create_html_table(table_data, table_data_general_status, host_name, current_date_time, exe_version)
 
