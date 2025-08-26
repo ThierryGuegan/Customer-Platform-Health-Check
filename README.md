@@ -4,13 +4,12 @@ This Customer_Platform_Health_Check.exe provides a health check utility for mana
 ### Features
 - **Database Connection Check**: Validates connectivity to a PostgreSQL database (CSS).
 - **License Key Validation**: Verifies license keys in both CSS and the AIP console.
-- **Disk Space Monitoring**: Ensures sufficient disk space on the specified drive.
+- **Disk Space Monitoring**: Ensures sufficient disk space for all the attached drives.
 - **Service Checks**: Monitors AIP Console version, services like HDED, and imaging status.
 - **HTML Report Generation**: Creates an HTML report summarizing health checks.
 
 ### Prerequisites
-To run Customer_Platform_Health_Check.exe we need below details. These details should be there
-inside Customer_Platform_Health_Check_Settings.json file.
+To run Customer_Platform_Health_Check.exe we need below details. These details should be there inside Customer_Platform_Health_Check_Settings.json file.
 
 
 Example JSON Structure
@@ -53,10 +52,10 @@ This file contains critical configuration values, including:
 - HDED Dashborad URL
 - HTML FILE PATH
 
-Additionally, the EXE version (Version-1.0.0.1) is hardcoded.
+Additionally, the EXE version (Version-1.0.0.4) is hardcoded.
 
 **2. Log File Creation:**
-The script creates a log file named Customer_Platform_Health_Check_Logs.txt in the same directory to record all actions and errors.
+The script creates a log file named Customer_Platform_Health_Check.log in the same directory to record all actions and errors.
 
 **3. CSS Configuration Update:**
 Fetches the CSS port number and hostname from the AIP Console.
@@ -74,9 +73,9 @@ Performs various health checks, including:
 
 - **CSS Status:** Validates database connectivity.
 - **License Key Status:** Verifies license key validity in CSS and Console.
-- **Disk Space:** Checks if sufficient disk space is available on the C: drive.
+- **Disk Space:** Checks if sufficient disk space is available on all the attached drives.
 - **HDED Service Status:** Ensures the HDED service is running and its URL is functional.
-- **Imaging Status:** Confirms whether imaging is properly loaded.
+- **Imaging Status:** Confirms whether Imaging viewer settings are set (URL & API key) in Imaging Console.
 
 **7. Generating an HTML Report:**
 - Collects data such as:
@@ -110,14 +109,18 @@ Performs various health checks, including:
 - **create_html_table(data, host_name, current_date_time, exe_version)**:- Generates an HTML table for the health check results.
 
 ### Logs
-The script logs details of its execution inside Customer_Platform_Health_Check_Logs.txt file.
+The script logs details of its execution inside Customer_Platform_Health_Check.log file.
 
 ### Error Handling
 - Errors during execution are logged for debugging purposes.
 - The script provides meaningful messages for configuration or runtime issues.
 
+## Build the executable 
+How to build Customer_Platform_Health_Check.exe ? 
+
 ### Deployment
 Deploy Customer_Platform_Health_Check.exe inside Windows Task Scheduler using Customer_Platform_Health_Check.xml file.
+How to fill Customer_Platform_Health_Check.xml file ? 
 
 ### Example HTML file.
 ![image](https://github.com/user-attachments/assets/5832d0c5-5871-4105-a566-0d0a557650d4)

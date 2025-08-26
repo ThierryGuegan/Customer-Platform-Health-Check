@@ -11,7 +11,6 @@ from datetime import datetime
 from requests.auth import HTTPBasicAuth
 
 
-
 class Platform():
 
     def __init__(self, css_database, css_user, css_password, css_host, css_port, console_restURL, console_user, console_password, console_api_key, warnDays, dashboard_url):
@@ -33,7 +32,7 @@ class Platform():
 
         try:
             method = "get"
-            url=f"{self.console_restURL}api/settings/measurement-settings"
+            url=f"{self.console_restURL}api/settings/measurement-settings"            
             auth = HTTPBasicAuth(f'{self.console_user}', f'{self.console_password}')
             headers = {"X-API-KEY": self.console_api_key}
 
@@ -73,7 +72,6 @@ class Platform():
 
                     print(f"updated the CSS port number as {port_no} and hostname as {host_name} inside Customer_Platform_Health_Check_Settings.json file.")
                     logging.info(f"updated the CSS port number as {port_no} and hostname as {host_name} inside Customer_Platform_Health_Check_Settings.json file.")
-
 
         except Exception as e:
             print('some exception has occured! while executing update_css_details() function.\n Please resolve them or contact developers.')
@@ -141,8 +139,9 @@ class Platform():
 
                 for i in range(len(data["schemas"])):
                     if data["schemas"][i]["type"] == 'local':
-                        return data["schemas"][i]["name"]
-
+                        local_schema = data["schemas"][i]["name"]
+                        logging.info(f'local schema = [{local_schema}]')                  
+                        return local_schema 
             else:
                 print("Some error has occured! While fetching local schema.")
                 print(rsp.text)
@@ -182,8 +181,8 @@ class Platform():
             cursor.close()
             connection.close()
         except Exception as e:
-            logging.error("update_application_license_key() :- some exception has occured while updating application license in the CSS! \n Please resolve them or contact developers")
-            print('update_application_license_key() :- some exception has occured while updating application license in the CSS! \n Please resolve them or contact developers')
+            logging.error(f"update_application_license_key() :- some exception has occured while updating application license in the CSS for the local schema named {app_local_schema} ! \nPlease resolve them or contact developers")
+            print(f'update_application_license_key() :- some exception has occured while updating application license in the CSS for the local schema named {app_local_schema} ! \n Please resolve them or contact developers')
             logging.error(e)
             print(e)
 
@@ -209,7 +208,8 @@ class Platform():
             cursor.close()
             connection.close()
 
-            return "OK"
+            return f"OK {result}"
+        
         except Exception as e:
             logging.info("check_postgres_status() :- KO - the database is not accepting connection).")
             logging.error("check_postgres_status() :- PostgreSQL connection failed:", e)
@@ -332,23 +332,42 @@ class Platform():
 
     def check_diskspace(self):
         try:
-            drive = 'C:\\'
-            usage = psutil.disk_usage(drive)
-            percent_free = 100 - usage.percent
-
-            if percent_free < 5:
-                DiskSpace_status = ("KO - (Less than {:.0f}% free space remaining on {} drive)".format(5, drive))
-                logging.info("KO - (Less than {:.0f}% free space remaining on {} drive)".format(5, drive))
-            elif percent_free < 10:
-                DiskSpace_status = ("WARN - (Less than {:.0f}% free space remaining on {} drive)".format(10, drive))
-                logging.info("WARN - (Less than {:.0f}% free space remaining on {} drive)".format(10, drive))
+            statuses = []
+    
+            for partition in psutil.disk_partitions(all=False):
+                try:
+                    usage = psutil.disk_usage(partition.mountpoint)
+                    percent_free = 100 - usage.percent
+                    drive = partition.device
+    
+                    if percent_free < 5:
+                        status = f"KO - ({percent_free:.1f}% free space remaining on {drive})"
+                        logging.info(status)
+                    elif percent_free < 10:
+                        status = f"WARN - ({percent_free:.1f}% free space remaining on {drive})"
+                        logging.info(status)
+                    else:
+                        status = f"OK - ({percent_free:.1f}% free space remaining on {drive})"
+                        logging.info(f"check_diskspace(): {status}")
+    
+                    statuses.append(status)
+    
+                except PermissionError:
+                    # Happens sometimes on special system partitions (ignore safely)
+                    logging.warning(f"Skipping {partition.device} (permission denied)")
+    
+            # If any drive is KO --> return KO, else WARN if any WARN, else OK
+            if any(s.startswith("KO") for s in statuses):
+                return next(s for s in statuses if s.startswith("KO"))
+            elif any(s.startswith("WARN") for s in statuses):
+                return next(s for s in statuses if s.startswith("WARN"))
             else:
-                DiskSpace_status = "OK"
-                logging.info("check_diskspace() :- OK - Have enough diskspace on C-Drive.")
-            return DiskSpace_status
+                return "OK"
+    
         except Exception as e:
-            logging.error("check_diskspace() :- ERR - some exception has occured while executing this function: ", e)
+            logging.error(f"check_diskspace(): ERR - exception occurred: {e}")
             return "ERR"
+
 
     def is_aip_console_version_2x(self):
 
@@ -465,10 +484,40 @@ class Platform():
         else:
             return "N/A for AIP Console Version-1.X"
         
-    def create_html_table(self, data, host_name, current_date_time, exe_version):
+    def create_html_table(self, data, data_general_status, host_name, current_date_time, exe_version):
         
-        table_html = f"<p> <b>Hostname:</b> {host_name} </p>  <p> <b>Generated on:</b> {current_date_time} </p> <p> <b>Customer_Platform_Health_Check.exe: </b> {exe_version} </p> <br/> <table style='border:1px solid black; border-collapse: collapse;'>\n"  # Adding 'border' attribute to add borders
-        
+        table_html = f"<p> <b>Hostname:</b> {host_name} </p>" 
+        table_html += f"<p> <b>CSS Host:</b> {self.css_host} <p> <b>Database:</b> {self.css_database} <b>Port:</b> {self.css_port} </p>" 
+        table_html += f"<p> <b>Console rest URL:</b> {self.console_restURL} </p>" 
+        table_html += f"<p> <b>Dashboard URL:</b> {self.dashboard_url} </p>" 
+                
+        table_html += f"<p> <b>Generated on:</b> {current_date_time} </p> <p> <b>Customer_Platform_Health_Check.exe: </b> {exe_version} </p> <br/>" 
+        table_html += f"</p> <br/>"
+        table_html += f"<table style='border:1px solid black; border-collapse: collapse;'>\n"  # Adding 'border' attribute to add borders
+      
+        # Create table header
+        header_row = data_general_status[0]
+        table_html += "  <tr>\n"
+        for header in header_row:
+            table_html += f"    <th style='border:1px solid black; border-collapse: collapse;'>&nbsp&nbsp{header}&nbsp&nbsp</th>\n"
+        table_html += "  </tr>\n"      
+      
+        # Create table rows
+        for row in data_general_status[1:]:
+            table_html += "  <tr>\n"
+            for i in range(len(row)):
+                if row[i].startswith("WARN"):
+                    table_html += f"<td style='border:1px solid black; border-collapse: collapse; text-align: center;'> <span style='color:#FCD12A;'>{row[i][:4]} </span><span style='color:black;'>{row[i][4:]}</span>\n  </td>"
+                elif row[i].startswith("KO") or row[i].startswith("ERR"):
+                    table_html += f"<td style='border:1px solid black; border-collapse: collapse; text-align: center;'> <span style='color:red;'>{row[i][:2]}<span style='color:black;'>{row[i][2:]}</span>\n  </td>"
+                else:
+                    table_html += f"<td style='border:1px solid black; border-collapse: collapse; text-align: center;'>{row[i]}</td>\n"
+
+            table_html += "  </tr>\n"
+        table_html += "</table>"   
+           
+        table_html += f"</p> <br/>"
+        table_html += f"<table style='border:1px solid black; border-collapse: collapse;'>\n"  # Adding 'border' attribute to add borders
         # Create table header
         header_row = data[0]
         table_html += "  <tr>\n"
@@ -484,14 +533,14 @@ class Platform():
                     table_html += f"<td style='border:1px solid black; border-collapse: collapse;'> {row[i]}</td>\n"
                 elif row[i].startswith("WARN"):
                     table_html += f"<td style='border:1px solid black; border-collapse: collapse; text-align: center;'> <span style='color:#FCD12A;'>{row[i][:4]} </span><span style='color:black;'>{row[i][4:]}</span>\n  </td>"
-                elif row[i].startswith("KO") or row[i].startswith("ERR"):
+                elif row[i].startswith("KO") or row[i].startswith("ERR") or row[i].startswith("N/A"):
                     table_html += f"<td style='border:1px solid black; border-collapse: collapse; color:red; text-align: center;'> {row[i]} </td>\n"
                 else:
                     table_html += f"<td style='border:1px solid black; border-collapse: collapse; text-align: center;'>{row[i]}</td>\n"
 
             table_html += "  </tr>\n"
-        
         table_html += "</table>"
+        
         return table_html
 
 
@@ -516,11 +565,11 @@ if __name__ == "__main__":
         warnDays = data['warnDays']
         dashboard_url = data['dashboard_url']
         html_file_path = data['html_file_path']
-        exe_version = 'Version-1.0.0.3'
+        exe_version = 'Version-1.0.0.4'
 
         isExist = os.path.exists(current_directory)
 
-        logging.basicConfig(filename= current_directory + "\\Customer_Platform_Health_Check_Logs.txt", level=logging.INFO, format="%(asctime)s %(message)s", filemode='w')
+        logging.basicConfig(filename= current_directory + "\\Customer_Platform_Health_Check.log", level=logging.INFO, format="%(asctime)s %(message)s", filemode='w')
 
         # logging.info('-----------------------------------------------------------------------------------------------------------------------------------------------')
 
@@ -533,8 +582,18 @@ if __name__ == "__main__":
         host_name = returned_value.decode("utf-8").strip().lower()
 
         # platform_obj.update_css_details(current_directory + '\\Customer_Platform_Health_Check_Settings.json', host_name)
+        table_data_general_status = [["CSS Status", "DiskSpace in attached disk drives", "License Key in Console", "Imaging settings in Console"]]
+        table_data = [["Application Name", "License Key in CSS", "Engineering/Health Dashboard"]]
 
-        table_data = [["Application Name", "CSS Status", "License Key in CSS", "License Key in Console", "DiskSpace in C-Drive", "Engineering/Health Dashboard", "Imaging is loaded"]]
+        logging.info(f'checking platform health.....')
+        # Call the function to check the Disk space status        
+        DiskSpace_status = platform_obj.check_diskspace()
+        # Call the function to check the CSS status        
+        CSS_Status = platform_obj.check_postgres_status()
+        Console_LK_status = platform_obj.check_the_licence_key_in_console()
+        Imaging_is_loaded = platform_obj.check_imaging_loaded()
+
+        logging.info('-----------------------------------------------------------------------------------------')
 
         applications = platform_obj.get_applications_from_console()
 
@@ -544,47 +603,39 @@ if __name__ == "__main__":
             for application, app_guid in applications.items():
 
                 app_local_schema = platform_obj.get_local_schema(app_guid)
-
-                if console_license_key != 0:
-                    platform_obj.update_application_license_key(app_local_schema, console_license_key)
-
-                logging.info('-----------------------------------------------------------------------------------------')
-
-                logging.info(f'checking platform health for {application}.....')
-                # Call the function to check the CSS status
-                CSS_Status = platform_obj.check_postgres_status()
-
-                CSS_LK_status = platform_obj.check_the_licence_key_in_css(app_local_schema)
-
-                Console_LK_status = platform_obj.check_the_licence_key_in_console()
-
-                DiskSpace_status = platform_obj.check_diskspace()
-
-                HDED_status = platform_obj.check_HDED()
-
-                Imaging_is_loaded = platform_obj.check_imaging_loaded()
-
-                table_data.append([application, CSS_Status, CSS_LK_status, Console_LK_status, DiskSpace_status, HDED_status, Imaging_is_loaded])
+                if app_local_schema != None: 
+                    logging.info(f'checking app_local_schema {app_local_schema}.....')
+                    
+                    if console_license_key != 0:
+                        platform_obj.update_application_license_key(app_local_schema, console_license_key)
+    
+                    logging.info('-----------------------------------------------------------------------------------------')
+                    logging.info(f'checking platform health for {application}.....')
+                    CSS_LK_status = platform_obj.check_the_licence_key_in_css(app_local_schema)
+                    HDED_status = platform_obj.check_HDED()
+    
+                    table_data.append([application, CSS_LK_status, HDED_status])                    
+                    
+                else: 
+                    logging.info(f'Not able to get app_local_schema [{app_local_schema}] for app_guid [{app_guid}].....')
+                    logging.info('-----------------------------------------------------------------------------------------')
+                    logging.info(f'checking platform health for {application}.....')        
+                    HDED_status = platform_obj.check_HDED()
+        
+                    table_data.append([application, 'N/A', HDED_status])
 
         else:
             logging.info(f'checking platform health.....')
-            # Call the function to check the CSS status
-            CSS_Status = platform_obj.check_postgres_status()
-
-            Console_LK_status = platform_obj.check_the_licence_key_in_console()
-
-            DiskSpace_status = platform_obj.check_diskspace()
 
             HDED_status = platform_obj.check_HDED()
 
-            Imaging_is_loaded = platform_obj.check_imaging_loaded()
-
-            table_data.append([ 'N/A', CSS_Status, 'N/A', Console_LK_status, DiskSpace_status, HDED_status, Imaging_is_loaded])
+            table_data.append([ 'N/A', 'N/A', HDED_status])
 
         logging.info('-----------------------------------------------------------------------------------------')
-
-        # Generate HTML table
-        html_table = platform_obj.create_html_table(table_data, host_name, current_date_time, exe_version)
+        
+        table_data_general_status.append([CSS_Status, DiskSpace_status, Console_LK_status, Imaging_is_loaded]) 
+        # Generate HTML table for applications informations 
+        html_table = platform_obj.create_html_table(table_data, table_data_general_status, host_name, current_date_time, exe_version)
 
         # Write HTML to a file
         local_html_path = html_file_path + f'\\{host_name}.html' 
